@@ -3,10 +3,16 @@
 import PyInstaller.__main__
 import os
 import sys
+from pathlib import Path
 
 # Параметры сборки
 output_name = "SteamAutoLauncher"
 main_file = "main.py"
+
+print("🔨 Начинаю сборку exe...")
+print(f"Файл: {main_file}")
+print(f"Название: {output_name}")
+print()
 
 # Команда PyInstaller
 PyInstaller.__main__.run([
@@ -15,7 +21,6 @@ PyInstaller.__main__.run([
     '--onefile',  # Один exe файл
     '--windowed',  # Без консоли
     '--icon=NONE',  # Иконка (опционально)
-    '--add-data', 'config.json:.',
     '--collect-all', 'pywinauto',
     '--collect-all', 'keyboard',
     '--collect-all', 'pyperclip',
@@ -24,4 +29,5 @@ PyInstaller.__main__.run([
 ])
 
 print("\n✅ Сборка завершена!")
-print(f"Exe находится в папке: dist/{output_name}.exe")
+print(f"📁 Exe находится в папке: dist/{output_name}.exe")
+print(f"\n🚀 Для запуска используй: dist/{output_name}.exe")
