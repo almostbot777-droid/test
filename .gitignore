@@ -1,0 +1,14 @@
+# Конфиг
+config.json
+.steam_key
+*.pyc
+__pycache__/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Логи
+*.log

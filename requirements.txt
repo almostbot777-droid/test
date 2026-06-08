@@ -1,0 +1,2 @@
+pywinauto==0.6.8
+cryptography==41.0.7
