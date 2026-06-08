@@ -1,11 +1,10 @@
-"""Логика запуска Steam и игр."""
+"""Логика запуска Steam и игр с правильной работой UI."""
 
 import os
 import subprocess
 import time
 from pathlib import Path
 
-from config import get_account_password
 from dialog_bypass import bypass_account_selector
 
 
@@ -57,26 +56,57 @@ def kill_steam_processes():
         pass
 
 
+def input_credentials(login: str, password: str, status_callback=None):
+    """Вводит логин и пароль в Steam через буфер обмена и клавиатуру."""
+    def log(msg):
+        if status_callback:
+            status_callback(msg)
+        print(msg)
+    
+    try:
+        import keyboard
+        import pyperclip
+        
+        log(f"Фокусируем Steam окно и вводим логин...")
+        time.sleep(1)
+        
+        # Копируем логин в буфер и вставляем
+        pyperclip.copy(login)
+        keyboard.send('ctrl+a')  # Выбрать всё
+        time.sleep(0.3)
+        keyboard.send('ctrl+v')  # Вставить логин
+        time.sleep(0.5)
+        keyboard.send('tab')     # Перейти на пароль
+        time.sleep(0.3)
+        
+        # Копируем пароль и вставляем
+        pyperclip.copy(password)
+        keyboard.send('ctrl+v')  # Вставить пароль
+        time.sleep(0.5)
+        keyboard.send('tab')     # Перейти на Enter или код
+        time.sleep(0.3)
+        keyboard.send('enter')   # Нажимаем Enter
+        
+        log("✓ Учётные данные введены")
+        return True
+    except ImportError as e:
+        log(f"❌ Библиотека не установлена: {e}")
+        return False
+    except Exception as e:
+        log(f"❌ Ошибка ввода: {e}")
+        return False
+
+
 def launch_steam_only(
     login: str,
     password: str,
     steam_exe: str,
-    delay_startup: int = 15,
-    delay_hold: int = 10,
+    delay_startup: int = 45,
+    delay_hold: int = 15,
     delay_dialog: int = 3,
     status_callback=None,
 ) -> bool:
-    """Запустить только Steam.
-    
-    Args:
-        login: Steam логин
-        password: Steam пароль (не зашифрованный)
-        steam_exe: путь к steam.exe
-        delay_startup: задержка после запуска Steam (для загрузки)
-        delay_hold: как долго держать Steam открытым
-        delay_dialog: задержка перед попыткой обхода диалога
-        status_callback: функция для вывода статуса
-    """
+    """Запустить только Steam с автоматическим вводом уч��тных данных."""
     def log(msg):
         if status_callback:
             status_callback(msg)
@@ -98,21 +128,21 @@ def launch_steam_only(
         log(f"[{login}] ⏳ Загрузка Steam ({delay_startup}с)...")
         time.sleep(delay_startup)
         
-        # Пробуем обойти диалог
-        log(f"[{login}] Попытка обхода диалога...")
+        # Пытаемся обойти диалог выбора аккаунта
+        log(f"[{login}] Проверка диалога выбора аккаунта...")
         time.sleep(delay_dialog)
         bypass_account_selector(login, timeout=5, status_callback=log)
         
-        # Вводим логин/пароль
+        # Вводим учётные данные
         log(f"[{login}] Ввод учётных данных...")
         time.sleep(1)
-        subprocess.Popen(f'"{steam_exe}" -login {login} {password}', shell=True)
+        input_credentials(login, password, status_callback=log)
         
-        # Держим Steam открытым
-        log(f"[{login}] ✓ Steam запущен, держим {delay_hold}с...")
+        # Ждём авторизации
+        log(f"[{login}] ⏳ Авторизация ({delay_hold}с)...")
         time.sleep(delay_hold)
         
-        # Закрываем
+        # Закрыть Steam
         log(f"[{login}] Закрытие Steam...")
         kill_steam_processes()
         time.sleep(1)
@@ -122,6 +152,7 @@ def launch_steam_only(
     
     except Exception as e:
         log(f"[{login}] ❌ Ошибка: {e}")
+        kill_steam_processes()
         return False
 
 
@@ -131,26 +162,13 @@ def launch_steam_with_game(
     steam_exe: str,
     app_id: str = "",
     game_exe: str = "",
-    delay_startup: int = 15,
-    delay_auth: int = 40,
-    delay_game: int = 10,
+    delay_startup: int = 45,
+    delay_auth: int = 50,
+    delay_game: int = 15,
     delay_dialog: int = 3,
     status_callback=None,
 ) -> bool:
-    """Запустить Steam и игру.
-    
-    Args:
-        login: Steam логин
-        password: Steam пароль
-        steam_exe: путь к steam.exe
-        app_id: App ID игры (если нет game_exe)
-        game_exe: путь к exe файлу игры
-        delay_startup: задержка после запуска Steam
-        delay_auth: задержка авторизации
-        delay_game: как долго держать игру открытой
-        delay_dialog: задержка перед обходом диалога
-        status_callback: функция для вывода статуса
-    """
+    """Запустить Steam и игру с автоматическим вводом учётных данных."""
     def log(msg):
         if status_callback:
             status_callback(msg)
@@ -172,15 +190,15 @@ def launch_steam_with_game(
         log(f"[{login}] ⏳ Загрузка Steam ({delay_startup}с)...")
         time.sleep(delay_startup)
         
-        # Пробуем обойти диалог
-        log(f"[{login}] Попытка обхода диалога...")
+        # Пытаемся обойти диалог выбора аккаунта
+        log(f"[{login}] Проверка диалога выбора аккаунта...")
         time.sleep(delay_dialog)
         bypass_account_selector(login, timeout=5, status_callback=log)
         
-        # Вводим логин/пароль
+        # Вводим учётные данные
         log(f"[{login}] Ввод учётных данных...")
         time.sleep(1)
-        subprocess.Popen(f'"{steam_exe}" -login {login} {password}', shell=True)
+        input_credentials(login, password, status_callback=log)
         
         # Ждём авторизации
         log(f"[{login}] ⏳ Авторизация Steam ({delay_auth}с)...")
@@ -194,13 +212,13 @@ def launch_steam_with_game(
             log(f"[{login}] 🎮 Запуск игры (App ID): {app_id}")
             subprocess.Popen(f"steam://run/{app_id}")
         else:
-            log(f"[{login}] ⚠ App ID и путь к игре не указаны")
+            log(f"[{login}] ⚠️  App ID и путь к игре не указаны")
         
-        # Держим игру открытой
-        log(f"[{login}] ✓ Игра запущена, ждём {delay_game}с...")
+        # Ждём в игре
+        log(f"[{login}] ⏳ Время в игре ({delay_game}с)...")
         time.sleep(delay_game)
         
-        # Закрываем
+        # Закрыть Steam
         log(f"[{login}] Закрытие Steam...")
         kill_steam_processes()
         time.sleep(1)
@@ -210,4 +228,5 @@ def launch_steam_with_game(
     
     except Exception as e:
         log(f"[{login}] ❌ Ошибка: {e}")
+        kill_steam_processes()
         return False
